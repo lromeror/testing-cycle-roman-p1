@@ -107,7 +107,7 @@ def _check_canonical(text, groups):
 def from_roman(s):
     if not isinstance(s, str):
         raise RomanError("value must be a string")
-    text = s.upper()
+    text = s.strip().upper()
     if text == "":
         raise RomanError("empty string is not a roman numeral")
     for ch in text:

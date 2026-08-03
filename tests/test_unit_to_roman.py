@@ -119,6 +119,7 @@ def test_du_remaining_crosses_several_pairs():
         (3999, "MMMCMXCIX"),
     ],
 )
+
 def test_subtractive_notation_is_mandatory(number, expected):
     """Mandatory reference values of specification section 2."""
     assert to_roman(number) == expected

@@ -53,6 +53,57 @@ def to_roman(n):
     return "".join(out)
 
 
+def _split_groups(text):
+    """Read `text` as the sequence of groups of specification section 4.
+
+    A group is one of the six subtractive pairs or a single symbol.  Rule 3
+    also forbids any other symbol followed by one of greater value.
+    """
+    groups = []
+    i = 0
+    length = len(text)
+    while i < length:
+        if i + 1 < length and text[i:i + 2] in _VALID_SUBTRACTIVE:
+            groups.append(text[i:i + 2])
+            i += 2
+            continue
+        if i + 1 < length and _SINGLE[text[i]] < _SINGLE[text[i + 1]]:
+            raise RomanError("invalid subtractive pair: " + text[i:i + 2])
+        groups.append(text[i])
+        i += 1
+    return groups
+
+
+def _group_value(group):
+    if len(group) == 2:
+        return _SINGLE[group[1]] - _SINGLE[group[0]]
+    return _SINGLE[group]
+
+
+def _check_canonical(text, groups):
+    """Apply the five formal rules of specification section 4."""
+    for symbol in "IXCM":
+        if symbol * 4 in text:
+            raise RomanError(symbol + " may appear at most three times in a row")
+    for symbol in "VLD":
+        if _count_char(text, symbol) > 1:
+            raise RomanError(symbol + " may appear at most once")
+    for pair in _VALID_SUBTRACTIVE:
+        if groups.count(pair) > 1:
+            raise RomanError("subtractive pair " + pair + " may appear at most once")
+    previous = None
+    limit = None
+    for group in groups:
+        value = _group_value(group)
+        if previous is not None and value > previous:
+            raise RomanError("group values must not increase: " + text)
+        if limit is not None and value >= limit:
+            raise RomanError("group after a subtractive pair is too large: " + text)
+        if len(group) == 2:
+            limit = _SINGLE[group[0]]
+        previous = value
+
+
 def from_roman(s):
     if not isinstance(s, str):
         raise RomanError("value must be a string")
@@ -62,30 +113,14 @@ def from_roman(s):
     for ch in text:
         if ch not in _SINGLE:
             raise RomanError("invalid roman character: " + ch)
+    groups = _split_groups(text)
+    _check_canonical(text, groups)
     total = 0
-    i = 0
-    length = len(text)
-    while i < length:
-        if i + 1 < length:
-            pair = text[i:i + 2]
-            if pair in _VALID_SUBTRACTIVE:
-                total += _SINGLE[pair[1]] - _SINGLE[pair[0]]
-                i += 2
-                continue
-        current = _SINGLE[text[i]]
-        if i + 1 < length:
-            nxt = _SINGLE[text[i + 1]]
-            if current < nxt:
-                raise RomanError("invalid subtractive pair: " + text[i:i + 2])
-        total += current
-        i += 1
+    for group in groups:
+        total += _group_value(group)
     if total < _MIN_VALUE or total > _MAX_VALUE:
         raise RomanError("value out of range 1..3999")
     return total
-
-
-def _roundtrip_differs(value, text):
-    return to_roman(value) != text
 
 
 def _count_char(text, ch):
